@@ -1,0 +1,70 @@
+
+
+Let's assume total # of page fauls happened for tenant i is is equal to PF(i).
+And priority level of tenant i is equal to L(i).
+So cost becomes, sum(PF(i) * L(i)) for all 1 <= i <= N.
+Well actually official sum function is different, but there, instead of PF(i), we use some
+same-direction monotonic value depending of PF(i). So to make things easier, let's use PF(i) for now.
+
+If we have independent and fixed PF and L arrays beforhand, then it makes sense to match lowest PF value with largest L value, second lowest PF value with second largest L value, etc. This will give us minimum sum/cost function.
+
+But our PF array is not fixed beforehand, whereas L is fixed. So one simple approach is, 
+when trying to evict some tenant, we choose the one having lowest L.
+Page faults with lowest L will incur much less cost, than page faults with largest L.
+
+Ok. i implemented solution where I evict by lowest L first, then by LRU. result: 2.8K.
+Only in one test it's better than global RSU.
+test 17 : 0.0 < 211.257
+How this test should look like then?
+Image we have A, B, C, D, E blocks and 4 slots in the buffer.
+Also L(A) > L(B) > L(C) > L(D) > L(E).
+Access pattern is ABCDEABCDEABCDEABCDE....
+our buffer is like
+A(m): A
+B(m): B A
+C(m): C B A
+D(m): D C B A
+* E(m): E D C B
+A(m): A E D C
+B(m): B A E D
+C(m): C B A E
+D(m): D C B A
+E(m): E D B C
+in this case, even with LRU, we always have cache miss.
+but if we don't evict A during (*), we will have cache hit in the next access.
+Maybe test case 17 is something related, i.e alternating access which gives 0 with LRU,
+but 211.257 with lowest L first, then by LRU.
+
+Just noticed that even MRU behaves better than LRU in 2 tests.
+Can we dynamically determine which one is the best during runtime?
+
+
+2) i implemented solution where I evict by highest L first, then by LRU. result: 1.3K.
+This wins global LRU in one test, which is situational, I believe:
+Kamrans-MacBook-Pro:test_data kamranmaharov$ python3 same_points.py res7.txt res9.txt  | grep "<"
+test 13 : 395.65 < 434.996
+
+
+
+So Looks like L have impact in the result, but not as much as LRU itself.
+
+
+
+So when I do LRU with prioritize-self-over-others(others by LRU), I get 6K points.
+Here too, each tenant's buffer size doens't exceed (size at the point when buffer became full, q_min)
+otherwise it will self-evict itself and decrease the size.
+This solution could give us a state, where each tenant's size does not change anymore.
+
+
+
+
+
+So when I do LRU with prioritize-others-over-self(others by LRU), I get 7.6K points.
+This shows that on average we should evict LRU, even if this LRU belongs to current tenant.
+
+
+
+I tried prioritize-others-over-self (for others, choose lowest L first, then by LRU) , but it gave 3.8K.
+Which shows that on average, choosing LRU first yields higher score,
+than choosing lowest L first.
+

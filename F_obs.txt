@@ -1,0 +1,46 @@
+Total 30 tests.
+
+In first test, Q >= sum(qbase[i]).
+In other tests, Q  >= sum(qbase[i]) * 0.5;
+
+In 14 tests, Q >= sum(qbase[i]) * 0.75;
+
+In 12 tests Q >= sum(D[i]) * 0.25;
+
+vector<int> evictables;
+
+// bring qbase to picture somehow
+I made following change to give preference to those tenants who are consuming more than qbase[i] slots during eviction.
+Since we are doing LRU, and base algorithm is also LRU,
+in case some tenant i will consume exactly qbase[i] slots in our algorithm all the time, result should be identical to base algorithm and cost us 0 according to cost formula.
+More than qbase[i] slots will also cost us 0.
+So it does not make sense for a tenant to consume more than qbase[i] slots at any time, while doing LRU.
+(maybe for other eviction strategies that would make sense ????? )
+This change bring 10148 (LRU + qbase), up from 9675 (just LRU).
+470 pts difference, almost one testcase points (500).
+
+
+for (int i=1; i<=N; i++) {
+    if (i == u) {
+        if (bufferSize[u] >= qmin[u] && bufferSize[u] >= qbase[u]) {
+            evictables.push_back(u);
+        }
+    } else {
+        if (bufferSize[i] > qmin[i] && bufferSize[i] > qbase[i]) {
+            evictables.push_back(i);
+        }
+    }
+}
+
+
+
+After adding above, I tried some other approaches.
+Namely, tried to prevent assigning (u, p) to newSlot in case our shared buffer is not full yet.
+In the hope that, if (u, p) will get assigned to the already occupied slot for which bufferSize[i] > qBase[i],
+other tenents will get more chances. But bs, obviously. Assigning unoccupied slots always are better until buffer is full.
+
+I tried to filter out tenants with their L >= min_l_unneeded * 2. but no additional points.
+
+Not last and not least, I modified projected time to 1.0 * (time - lruTime) * (L[i] + 1) / L[i],
+which brought more points in L-only approach. And it brought more points in this case, too.
+1.0 * (time - lruTime) * (L[i] + 1) / L[i] - Real sh*t.

@@ -1,0 +1,21 @@
+2 main approaches.
+
+First of all if page (u, p) is in buffer, we serve it.
+
+Otherwise, if u has not reached q_min(u) yet, (u, p) should be placed to some slot in the buffer. Given that, ( sum( q_min(t) ) ACROSS all t) <= Q, there will be some slot which is not allocated to any tenant, or some tenant v for which current(v) > qmin(v). So we can replace one of those. We can't replacue u's own page, since current(u) < q_min(u).
+
+(u, p)
+So if, current(u) < q_min(u), p should replace non-u user's page.
+if q_min(u) <= current(u) < q_max(u), p can replace both u's OR non-u user's page.
+if q_max(u) == current(u), p can replace u's page.
+
+(v)
+v can be REPLACED by others page if current(v) > q_min(v), or by self page if current(v) >= q_min(v).
+
+If we are going to prioritize self-swap over other-swaps for all tenants all the time, then current(t) <= max(q_min(t), elements_when_buffer_becomes_full_first_time(t)) for all tenants all the time. So after some point, tenant's buffer becomes static/non-growing.
+
+When I compare prioritize-other-over-self over prioritize-self-over-other, first one slightly wins over second one, PROBABLY due to dynamic buffer size is more advantageous than static buffer size in multi-tenant databases. This is when I choose largest tenant ID != Self. But when I compare prioritize-other-over-self (with smallest tenant ID != Self )  with prioritize-self-over-other, second wins. Interesting, probably this shows that we can equally likely evice self tenant or other tenant, and it should not affect score too much. But I get many 500 scores for prioritize-other-over-self approach.
+
+
+
+

@@ -1,0 +1,99 @@
+I did simulation using qbase[i]-fixed size LRU cache for each tenant i.
+Then calculated page_fault[i] and total[i].
+
+After this, evicting tenant with max page_fault[i] / total[i] ratio.
+This almost always uniquely identifies which tenant to evict,
+except test cases 21, 26.
+And brings 5.58K points.
+On comparison evicting lowest L tenant, brings 2.8 K points.
+On comparison evicting highest L tenant (which doesn't make sense), brings 1.3K points.
+
+When I put threshold to PF/TA >= 0.4, points rise from 5.58K to 9.031K.
+    which is worse than 0.5 threshold.
+When I restricted PF/TA - based eviction to when PF/TA >= 0.5,
+    points rise from 5.58K to 9.535
+When I put threshold to PF/TA >= 0.6, points rise to 9.74 K.
+When I put threshold to PF/TA >= 0.7, points rise to 9.771 K.
+When I put threshold to PF/TA >= 0.75, points rise to 9.775 K.
+When I put threshold to PF/TA >= 0.8, points rise to 9.779 K.
+When I put threshold to PF/TA >= 0.9, points rise to 9.784 K.
+When I put threshold to PF/TA >= 0.95, points rise to 9.784 K.
+
+
+
+      fault_count hit_count
+base       10          990
+our        20          980
+
+We have sla_rate = ( 20 - 10 ) / 10 = 1.0
+ 
+      fault_count    hit_count
+base       100          150
+our        200           50
+
+
+
+
+TENANT_1
+      fault_count     hit_count
+base       100         9900
+our        200         9800
+ 
+TENANT_2
+       fault_count    hit_count
+base       1000         9000
+our        2000         8000
+
+
+
+
+
+We have fault_count / total_access = 100 / 10000 vs 1000 / 10000.
+So we choose second one to evict in this case. (with fault_count 1000)
+
+
+First problem with this is that, we don't take into account our faults in any way,
+which will actually affect the outcome score.
+
+
+pure LRU brings 9.6K, and choosing tenant with max PF/TA >= [0.5 ... 0.9] brings 9.5K - 9.7K points.
+So not much value in here.
+This shows that during our process, timepoints where PF/TA >= [0.5 .... 0.9] are not too much
+to affect the result.
+In turn this means that, there's no CACHE AVERSE TENANT.
+If there were CACHE AVERSE TENANT, then their PF/TA >= 0.5, we would evict such a tenant all the time, 
+and get a good score I believe.
+Where there are actually CACHE AVERSE TENANT, which brings +100 points over pure LRU,
+with PF/TA >= 0.9. But THAT IS IT.
+
+Kamrans-MacBook-Pro:test_data kamranmaharov$ python3 same_points.py res45.txt res46.txt 
+test 10 : 391.897 < 499.966
+In most cases, there are not CACHE AVERSE TENANTS.
+What about CACHE AVERSE PAGES?
+
+When filtering IN only cache averse tenants ( PF / TA >= 90% ) and qbase-based evictables,
+score increases to 10187 points.
+
+Then introduce set of tenants having PF / TA >= 50% and having minimum value of L(i).
+tenant must be either in this set or in qbase-based evictables, to be considered for eviction.
+This brings 10204.61K points.
+
+Tried with PF / TA >= 70% with minimum L's + qbase - based evictables. Score = 10187.
+
+
+Then implemented cacheFriendlyPages approach. If some page hit by simulation, but fault by our algorithm.
+We make sure that we are not marking these pages for eviction. 
+If there are no such pages, we fall back to LRU.
+This brings 3264.445K points.
+
+
+To resolve, TLE tests, I made timeToSlot check fast forward those slots,
+which are in cacheFriendlyPages. This brought 9031 points.
+
+Then i removed p from cacheFriendlyPages, if hit by decision-maker. Brings 4.3K points, due to TLE.
+Also removed from simulation, if NOT hit by simulation. Same 4.3K, due to TLE.
+
+
+I removed PF/ TL and qbase-evictable effect from cacheFriendlyPages eviction, which brought 4063K points,
+due to TLE. But it gives low score in non-TLE tests, so probably I should spend my energy elsewhere.
+

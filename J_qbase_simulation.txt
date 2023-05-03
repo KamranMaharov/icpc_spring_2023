@@ -1,0 +1,44 @@
+SIM:
+At last >11K points. NICE NICE NICE !!!!!!!!!
+I calculate minimum cost for tenant for which
+    (sla_rate(i) ^ 2) * L(i) is minimum.
+    where sla_rate = ( max(pf_actual(i) + 1, pf_base(i) + 1) - (pf_base(i) + 1) ) / (pf_base(i) + 1) at each timepoint.
+Basically, same formula as in problem description.
+I choose minimum costed tenant, and evict its LRU item.
+This brings 11,037 points.
+
+
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.5
+If there is no such tenant, I fallback to SIM. This brings 10306 points.
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.75.
+If there is no such tenant, I fallback to SIM. This brings 11042 points.
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.80
+If there is no such tenant, I fallback to SIM. This brings 11044 points.
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.90
+If there is no such tenant, I fallback to SIM. This brings 11037 points.
+
+
+We have same sla_rate.
+But maybe judging by so far outlook,
+probably we will have more faults for second option in the future????? really?
+Probably we should adjust for these things somehow.
+Amortized weight maybe?
+
+
+
+
+
+Worth investigating SIM and PF/TA separately.
+TODO: investigate affect of L(i) to PF/TA.
+            *** For instance, does it make sense to evict max PF/TA if it has highest L? (I think DONE)
+            *** Maybe pick multiple PF/TA >= 0.5 and among them, evict lowest L?         (I think DONE)
+
+
+It's amazing that just by simulating qbase-sized single-tenant LRU caches,
+    we are able to select single tenant, evict its LRU, and get 11037 points. AMAZING.
+TODO:
+            *** What if our own cache is LFU, not LRU?
+            *** Apply AIMD to LFU?
+            *** Apply qbase trimming, i.e evict tenants for which bufferSize[i] > qbase[i].
+            *** Can we choose among multiple tenants and apply ( L(i) + 1 ) / L(i) Belady's weighted prediction?
+

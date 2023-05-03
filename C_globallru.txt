@@ -1,0 +1,27 @@
+
+
+Ok. We have N tenants.
+For each access operation (u, p) we can apply global LRU.
+i.e we can evict least recently used page AMONG all EVICTABLE tenants.
+Some tenants may not be evictable due to their current(t) <= q_min(t).
+All other tenants for which current(t) > q_min(t), also this tenant if current(t) >= q_min(t) are evictables.
+
+For each slot, we maintain last time it was accessed and reverse map of this.
+So least recently used slot, will be the one with minimum time, i.e minimum element of reverse map.
+So we iterate in the order of least recently used slots, and see if the user occupying this slot is evictable or not. If evictable, then evict. This is Global RSU, and doesn't distinguish whether we are evicting current tenant or other tenants. This brough 9K score.
+In contrast, when we evict some evictable page based on no criteria (deterministically let's say) we can around 2.4K score.
+
+I modified code to evict page with most recent usage time, which dropped score from 9K to 1.3K, which probably indicates that my code doesn't have bugs and I implemented LRU correctly.
+
+
+TODO: don't store list of (page, slot) for each user, since I was using this to determine ANY (page, slot) of evictable user. So I was determining ANY user to evict, then choosing ANY slot within this user to evict.
+So list of (page, slot) for each user was used as a storage of slots per user.
+
+Some tests gave time limit with the above approach.
+Imaginational scenario: Let's say Tenant1 has q_min 100K. We accessed Tenant1's pages in the first 100K operations. Now we switched to Tenant2 who also has q_min 100K and accessed their pages in 100K operations.
+Total Q = 220K, so we have 20K more slots left. Now we switched to Tenant3, and accessed their pages 800K times.
+First 20K operations will use idle slots, but rest of the operations for Tenant3 will iterate through Tenant1's and Tenant2's slots first, only to find that they are not evictable. So Tenant3 can only replace its own slots, but we are still iterating Tenant1's and Tenant'2 slots, because they are least recently accessed/used. So idea here is to iterate over tenant's themselves first, since N<=10, and find LRU slot among all evictable tenants, and evict that. So we need per-tenant map in order to retrieve per-tenant LRU slot, so this is the optimization needed to get rid of the TLE. Even though we are implementing global LRU,
+per-tenant map is still needed to get rid of TLE.
+
+
+

@@ -1,0 +1,122 @@
+I did simulation using qbase[i]-fixed size LRU cache for each tenant i.
+Then calculated page_fault[i] and total[i].
+
+After this, evicting tenant with max page_fault[i] / total[i] ratio.
+This almost always uniquely identifies which tenant to evict,
+except test cases 21, 26.
+And brings 5.58K points.
+On comparison evicting lowest L tenant, brings 2.8 K points.
+On comparison evicting highest L tenant (which doesn't make sense), brings 1.3K points.
+
+When I put threshold to PF/TA >= 0.4, points rise from 5.58K to 9.031K.
+    which is worse than 0.5 threshold.
+When I restricted PF/TA - based eviction to when PF/TA >= 0.5,
+    points rise from 5.58K to 9.535
+When I put threshold to PF/TA >= 0.6, points rise to 9.74 K.
+When I put threshold to PF/TA >= 0.7, points rise to 9.771 K.
+When I put threshold to PF/TA >= 0.75, points rise to 9.775 K.
+When I put threshold to PF/TA >= 0.8, points rise to 9.779 K.
+When I put threshold to PF/TA >= 0.9, points rise to 9.784 K.
+When I put threshold to PF/TA >= 0.95, points rise to 9.784 K.
+
+SIM:
+At last >11K points. NICE NICE NICE !!!!!!!!!
+I calculate minimum cost for tenant for which
+    (sla_rate(i) ^ 2) * L(i) is minimum.
+    where sla_rate = ( max(pf_actual(i) + 1, pf_base(i) + 1) - (pf_base(i) + 1) ) / (pf_base(i) + 1) at each timepoint.
+Basically, same formula as in problem description.
+I choose minimum costed tenant, and evict its LRU item.
+This brings 11,037 points.
+
+
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.5
+If there is no such tenant, I fallback to SIM. This brings 10306 points.
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.75.
+If there is no such tenant, I fallback to SIM. This brings 11042 points.
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.80
+If there is no such tenant, I fallback to SIM. This brings 11044 points.
+At any time, I choose some tenant for which their PF/TA is maximum and >= 0.90
+If there is no such tenant, I fallback to SIM. This brings 11037 points.
+
+
+
+
+
+      fault_count hit_count
+base       10          990
+our        20          980
+
+We have sla_rate = ( 20 - 10 ) / 10 = 1.0
+ 
+      fault_count    hit_count
+base       100          150
+our        200           50
+
+
+
+
+TENANT_1
+      fault_count     hit_count
+base       100         9900
+our        200         9800
+ 
+TENANT_2
+       fault_count    hit_count
+base       1000         9000
+our        2000         8000
+
+
+We have fault_count / total_access = 100 / 10000 vs 1000 / 10000.
+So we choose second one to evict in this case. (with fault_count 1000)
+
+
+First problem with this is that, we don't take into account our faults in any way,
+which will actually affect the outcome score.
+
+
+pure LRU brings 9.6K, and choosing tenant with max PF/TA >= [0.5 ... 0.9] brings 9.5K - 9.7K points.
+So not much value in here.
+This shows that during our process, timepoints where PF/TA >= [0.5 .... 0.9] are not too much
+to affect the result.
+In turn this means that, there's no CACHE AVERSE TENANT.
+If there were CACHE AVERSE TENANT, then their PF/TA >= 0.5, we would evict such a tenant all the time, 
+and get a good score I believe.
+Where there are actually CACHE AVERSE TENANT, which brings +100 points over pure LRU,
+with PF/TA >= 0.9. But THAT IS IT.
+
+Kamrans-MacBook-Pro:test_data kamranmaharov$ python3 same_points.py res45.txt res46.txt 
+test 10 : 391.897 < 499.966
+In most cases, there are not CACHE AVERSE TENANTS.
+What about CACHE AVERSE PAGES?
+
+
+
+
+
+
+
+
+
+We have same sla_rate.
+But maybe judging by so far outlook,
+probably we will have more faults for second option in the future????? really?
+Probably we should adjust for these things somehow.
+Amortized weight maybe?
+
+
+
+
+
+Worth investigating SIM and PF/TA separately.
+TODO: investigate affect of L(i) to PF/TA.
+            *** For instance, does it make sense to evict max PF/TA if it has highest L?
+            *** Maybe pick multiple PF/TA >= 0.5 and among them, evict lowest L?
+
+
+It's amazing that just by simulating qbase-sized single-tenant LRU caches,
+    we are able to select single tenant, evict its LRU, and get 11037 points. AMAZING.
+TODO:
+            *** What if our own cache is LFU, not LRU?
+            *** Apply AIMD to LFU?
+            *** Apply qbase trimming, i.e evict tenants for which bufferSize[i] > qbase[i].
+            *** Can we choose among multiple tenants and apply ( L(i) + 1 ) / L(i) Belady's weighted prediction?

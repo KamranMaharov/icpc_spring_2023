@@ -1,0 +1,50 @@
+Keep track of # of hits (frequencies).
+Also for each slot, keep track last time of hit(or addition to buffer, in case of frequenci = 0)
+Choose least frequent slot, among those choose the one with smallest(or earliest) last time of hit.
+It is easier to see that in case all frequencies are 0, this is exact same as LRU.
+
+
+I have implemented LFU in most simple way, by adjusting LRU data structures.
+Simple is always better. Well done Kamran.
+
+Pure LFU gives 3.8K points.
+I'm evicting least frequently hit slots, among those I'm evicting the slot for which last hit was earliest.
+https://codeforces.com/contest/1813/submission/202748836
+
+
+I did following on top of pure LFU.
+We still do LFU, but occasionally launch md(multiplicative divide) to limit LFU's influence on LRU.
+This is similar to dynamic-aging-LFU.
+In case I'm evicting something with add_time >= current_time - Q * 0.75, it means 25 % of the queue are not evicted, due to they have larger frequency than the element currently evicted.
+ (otherwise, one of the slots in least recent 25% should have been evicted, due to their frequency is either lower, or in case of equal frequency,  their recency is lower).
+
+In following tests decreasing dm threshold from 0.75 to 0.7, 0.6, 0.5 increases score:
+test 2, 4, 10, 13, 14, 15, 16, 17, 24, 28, 30.
+This could potentially mean that
+in these tests, keeping most frequent items are more beneficial, even though they are old.
+I compared LFU-only solution which brings 3.8 K points,
+    with LFU + md = 0.5, and LFU + md = 0.5 is winner in all the test cases.
+So pure LFU doesn't make sense, some dynamic aging is required in order to not let cache
+    to get polluted by quite frequent, but old items.
+
+
+Ok. Now I'm going to describe best solution I've came up with, which scores 10484.155 points.
+So we have this LFU, but we want to prevent cases when most frequent items pollute the cache.
+That happens when old most frequent items are concentrated at the beginning of the buffer. (for time axis).
+So in case we are evicting slot with
+    time(slot) >= currentTime - Q + (Q / max(4, N)) * ( (maxL - L(u) + 1) / maxL) ,
+it means frequent old items are clogging the front of the buffer.
+If this happens, I trigger the process which decreases frequencies of the slots at the beginning of the buffer (for time axis).
+To do this, I take all slots for which
+    time(slot) <= currentTime - Q + (Q / max(3, N) ) * (  (maxL - L[u] + 1) /  maxL ),
+and divide their frequencies by 2(as in AIMD algoritghm for TCP congestion), since they are old items with high frequency count, unlikely that they will be re-used.
+
+
+I added "evictables restriction" heuristics, ie. restricting evictable tenants to those i where bufferSize[i] > qbase[i], or to whole set of tenants if there is no i where bufferSize[i] > qbase[i]. But points dropped to 6.2K.
+This "evictables restriction" heuristics doesn't help in this case.
+
+I added " (currentTime - lruTime) * (L[i] + 1) / L[i] " heuristics, to adjust projected eviction time, following in spirit Belady's algorithm, and it helped bring 10 points. 10484 -> 10495. NICE.
+
+
+
+

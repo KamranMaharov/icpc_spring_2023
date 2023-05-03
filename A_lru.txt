@@ -1,0 +1,23 @@
+How lru solution would work?
+Total buffer size is Q.
+When new access request (u, p) comes in,
+If (u, p) is already in the buffer, serve its location.
+Otherwise,
+    check if there is empty slot in buffer. If there is empty slot in buffer,
+        put page (u, p) to that slot.
+    if there is no empty slot, we need to evict some page from buffer, while
+        not violating q_min <= current pages <= q_max for all tenants.
+        For example, if for some other tenant their q_min >= # of their pages, we can't evict their page.
+        If for current tenant, # of current pages >= q_max, we should evict only current tenant's pages.
+        So, among pages belonging to "evictable" tenants, pick least recently used/accessed page.
+
+
+        # even most basic one: put everything into empty slots if there are empty slots, otherwise put to 1. which gives WA, cause q_min <= current pages <= q_max not maintained.
+
+        if at any point tenant T has current_pages > q_max pages in buffer, and U = T with new page  comes in, we are doomed. because new page can't be stored in other tenant's slots, neither it can replace T's own slots. So we should avoid current_pages > q_max situation for all tenants. Maybe it's some "loophole" which is worth investigating, but it has a potential to get WA, even though it may bring some points in some of the tests.
+
+
+        For example, if for some other tenant their q_min >= # of their pages, we can't evict their page. (we need to wait until # of their pages arrive at q_min + 1 so that others can evict this.)
+        If for current tenant, # of current pages >= q_max, we should evict only current tenant's pages. (if # of current pages >= q_max, we need other tenants evict this tenant's pages, so that this tenant can also evict other's pages
+        we need to wait until # of current pages drops to q_max - 1 so that this tenant can evict others).
+

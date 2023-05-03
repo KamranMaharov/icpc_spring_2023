@@ -1,0 +1,62 @@
+
+Submission 202519175 
+    I divide LRU time by L[i]. which doesn't make sense. Brings 2.5K points.
+
+Submission 202519730
+    I divide (current time - LRU time) by L[i]. This brings 9.3K points.
+    L's have big impact in this approach. for example,
+    if (current time - LRU time) is 100K, and some L value is 10,
+    adjustTime becomes 10K.
+    Vs 50K adjusted time for L = 2, and 100K adjusted time for L = 1.
+    Probably due to L values have significant impact on this approach,
+    9.3 points this brings is less than 9.6K plain L-less LRU.
+
+    TODO: maxL / L[i]. Should be same result.
+
+Submission 202521334
+    I multiply (current time - LRU time) by (L + 1) / L.
+    When L = 1, adjusted time is (current time - LRU time) * 2.
+    When L = 2, adjusted time is (current time - LRU time) * 3 / 2 = 1, 1/2.
+    When L = 3, adjusted time is (current time - LRU time) * 4 / 3 = 1, 1/3.
+    .....
+    When L = 10, adjusted time is (current time - LRU time) * 11 / 10 = 1, 10/1.
+    Still affecting LRU too much, but brings 9.9K points. Weird.
+
+Submission 202523250
+    I multiply (current time - LRU time) by (2 * L + 1) / L.
+    When L = 1, adjusted time is (current time - LRU time) * 3 / 1 = 3.
+    When L = 2, adjusted time is (current time - LRU time) * 5 / 2 = 2, 1/2.
+    When L = 3, adjusted time is (current time - LRU time) * 7 / 3 = 2, 1/3.
+    .....
+    When L = 10, adjusted time is (current time - LRU time) * 21 / 10 = 2, 10/1.
+    Still affecting LRU too much, but brings 9.8K points.
+
+Submission 202528232
+    When L = 1, adjusted time is (current time - LRU time) * 1
+    When L = 2, adjusted time is (current time - LRU time) * (1 - 1 / (10 * 9))
+    When L = 3, adjusted time is (current time - LRU time) * (1 - 2 / (10 * 9))
+    ..
+    When L = 10, adjusted time is (current time - LRU time) * (1 - 9 / (10 * 9)) =
+                                        (current time - LRU time) * (9 / 10).
+    In this case, L has little impact on LRU, and gets 9.7K points.
+
+
+Submission 202550266
+    I multiply (current time - LRU time) by (maxL / L[i]). This brings 9.3K points,
+    same as submission 202519730, as expected.
+
+Submission 202550747
+    Same as previous on, but I skip buffer slots greater than (min_lru_time + Q / 2).
+    9.6 K points.
+
+Submission 202550914
+    Same as previous on, but I skip buffer slots greater than (min_lru_time + Q / N).
+    9.758 K points.
+
+Submission 202551050
+    Same as previous on, but I skip buffer slots greater than (min_lru_time + Q / ( 2 * N) ).
+    9.728 K points.
+
+Submission 202551346
+    Between lru_time <= min_lru + Q / N, choose the one with lowest (L, lru_time),
+    i.e L first, then lru_time.
